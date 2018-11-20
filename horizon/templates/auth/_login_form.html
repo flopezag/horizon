@@ -1,79 +1,173 @@
 {% load i18n %}
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.1.3/css/bootstrap.min.css">
 
 {% block pre_login %}
-<form id="" class="ng-pristine ng-valid ng-scope"
-      method="POST"
-      action="{% url 'login' %}"
-      autocomplete="off"
-      ng-controller="hzLoginController">
+<form id="" class="ng-pristine ng-valid ng-scope" method="POST" action="{% url 'login' %}" autocomplete="off"
+  ng-controller="hzLoginController">
   {% csrf_token %}
-{% endblock %}
+  {% endblock %}
 
   <div class="panel panel-default">
 
     <div class="panel-heading">
-    {% block login_header %}
+      {% block login_header %}
       <h3 class="login-title">
         {% trans 'Log in' %}
       </h3>
-    {% endblock %}
+      {% endblock %}
     </div>
 
     <div class="panel-body">
-    {% block login_body %}
+      {% block login_body %}
       {% comment %}
-        These fake fields are required to prevent Chrome v34+ from autofilling form.
+      These fake fields are required to prevent Chrome v34+ from autofilling form.
       {% endcomment %}
       {% if HORIZON_CONFIG.password_autocomplete != "on" %}
-        <div class="fake_credentials" style="display: none">
-          <input type="text" name="fake_email" value="" />
-          <input type="password" name="fake_password" value="" />
-        </div>
+      <div class="fake_credentials" style="display: none">
+        <input type="text" name="fake_email" value="" />
+        <input type="password" name="fake_password" value="" />
+      </div>
       {%endif%}
+      {% if show_sso_opts %}
       {% include "auth/_description.html" %}
+      {% endif %}
       <fieldset hz-login-finder>
         {% if request.user.is_authenticated and 'next' in request.GET %}
-          <div class="form-group clearfix error help-block alert alert-danger">
-            <p>
-              {% trans "You do not have permission to access the resource:" %}
-            </p>
-            <p>
-              <strong>
-                {{ request.GET.next }}
-              </strong>
-            </p>
-            <p>
-              {% url 'horizon:user_home' as home_url %}
-              {% blocktrans trimmed %}
-                Login as different user or go back to <a href="{{ home_url }}">home page</a>
-              {% endblocktrans %}
-            </p>
-          </div>
-        {% endif  %}
+        <div class="form-group clearfix error help-block alert alert-danger">
+          <p>
+            {% trans "You do not have permission to access the resource:" %}
+          </p>
+          <p>
+            <strong>
+              {{ request.GET.next }}
+            </strong>
+          </p>
+          <p>
+            {% url 'horizon:user_home' as home_url %}
+            {% blocktrans trimmed %}
+            Login as different user or go back to <a href="{{ home_url }}">home page</a>
+            {% endblocktrans %}
+          </p>
+        </div>
+        {% endif %}
         {% if request.COOKIES.logout_reason %}
+        {% if request.COOKIES.logout_status == "success" %}
+        <div class="form-group clearfix error help-block alert alert-success" id="logout_reason">
+          {% else %}
           <div class="form-group clearfix error help-block alert alert-danger" id="logout_reason">
+            {% endif %}
             <p>{{ request.COOKIES.logout_reason }}</p>
           </div>
-        {% endif %}
-        {% if next %}
+          {% endif %}
+          {% if csrf_failure %}
+          <div class="form-group clearfix error help-block alert alert-danger" id="logout_reason">
+            <p>{{ csrf_failure }}</p>
+          </div>
+          {% endif %}
+          {% if next %}
           <input type="hidden" name="{{ redirect_field_name }}" value="{{ next }}" />
-        {% endif %}
-        {% include "horizon/common/_form_fields.html" %}
+          {% endif %}
+          {% include "horizon/common/_form_fields.html" %}
       </fieldset>
-    {% endblock %}
+      {% endblock %}
     </div>
 
-    <div class="panel-footer">
+    <div class="panel-footer" style="display: flex; justify-content: space-around; width: 443px">
       {% block login_footer %}
-        <button id="loginBtn" type="submit" class="btn btn-primary pull-right">
-          <span ng-show="auth_type==='credentials'">{% trans "Sign In" %}</span>
-          <span ng-hide="auth_type==='credentials'" ng-cloak>{% trans "Connect" %}</span>
-        </button>
-        <div class="clearfix"></div>
+      <!-- Button trigger modal -->
+      <button type="button" class="btn btn-secondary" data-toggle="modal" data-target="#forgotPassword">
+        <span>{% trans "Forgot password" %}</span>
+      </button>
+
+      <!-- Button trigger modal -->
+      <button href="#" id="myCustomTrigger" class="btn btn-secondary">
+        <span>{% trans "Create account" %}</span>
+      </button>
+
+      <button id="loginBtn" type="submit" class="btn btn-primary">
+        <span>{% trans "Sign In" %}</span>
+      </button>
+
+      <script type="text/javascript" src="https://jira.fiware.org/s/fff39b2d23a77b7c888956eab3174554-T/en_USpyf9wp/64016/32/1.4.25/_/download/batch/com.atlassian.jira.collector.plugin.jira-issue-collector-plugin:issuecollector/com.atlassian.jira.collector.plugin.jira-issue-collector-plugin:issuecollector.js?locale=en-US&collectorId=6015dab4"></script>
+      <script type="text/javascript">
+        window.ATL_JQ_PAGE_PROPS = {
+          "triggerFunction": function (showCollectorDialog) {
+            //Requires that jQuery is available! 
+            jQuery("#myCustomTrigger").click(function (e) {
+              e.preventDefault();
+              showCollectorDialog();
+            });
+          }
+        };
+      </script>
+
+      <div class="clearfix"></div>
       {% endblock %}
     </div>
   </div>
 
-{% block post_login%}
+  {% block post_login%}
 </form>
+
+<!-- Modal Forgot password-->
+<div class="modal fade" id="forgotPassword" tabindex="-1" role="dialog" aria-labelledby="forgotPasswordLabel"
+  aria-hidden="true">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="forgotPasswordLabel">Forgot password</h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body">
+        <form method="POST">
+          <div class="form-group">
+            <label for="username" class="col-form-label">User name</label>
+            <input type="text" class="form-control" id="username" value="" pattern=".+@.+" placeholder="a@b.com">
+            <div class="description">Insert the email address associate to your account</div>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-primary" onclick="resetPassword();" style="background-color: #3572b0; border-color: #3572b0;">
+          Submit
+        </button>
+        <a href="#" class="cancel" data-toggle="modal" data-dismiss="modal" onclick="resetData();" style="color: #3572b0;">
+          Close
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+<script type="text/javascript">
+  function resetPassword() {
+    var username = document.getElementById('username').value;
+    var url = "http://127.0.0.1:3001/reset/" + username;
+
+    alert(username);
+    alert(url);
+
+    var xhr = new XMLHttpRequest();
+    xhr.open("POST", url, true);
+    xhr.setRequestHeader('Content-Type', 'application/json');
+    xhr.send();
+
+    document.getElementById('username').value = ''
+    $('#forgotPassword').modal('toggle');
+  };
+
+  function resetData() {
+    document.getElementById('username').value = ''
+    $('#forgotPassword').modal('toggle');
+  }
+</script>
+
+<script src="https://code.jquery.com/jquery-3.3.1.slim.min.js" integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo"
+  crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.3/umd/popper.min.js" integrity="sha384-ZMP7rVo3mIykV+2+9J3UJ46jBk0WLaUAdn689aCwoqbBJiSnjAK/l8WvCWPIPm49"
+  crossorigin="anonymous"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/js/bootstrap.min.js" integrity="sha384-ChfqqxuZUCnJSK3+MXmPNIyE6ZbWh2IMqE241rYiqJxyMiZ6OW/JmZQ5stwEULTy"
+  crossorigin="anonymous"></script>
+
 {% endblock %}
