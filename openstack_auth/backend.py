@@ -15,6 +15,7 @@
 
 import datetime
 import logging
+import requests
 
 import pytz
 
@@ -157,6 +158,12 @@ class KeystoneBackend(object):
                 msg = _('You are not authorized for any projects or domains.')
             raise exceptions.KeystoneAuthException(msg)
 
+        # CEF Sandbox: Check roles associated to domain
+        self.check_domain_role(auth_url=auth_url, 
+                               auth_token=unscoped_auth_ref.auth_token, 
+                               user_id=unscoped_auth_ref.user_id, 
+                               domain_name=domain_name)
+
         # Check expiry for our new scoped token.
         self.check_auth_expiry(scoped_auth_ref)
 
@@ -168,7 +175,10 @@ class KeystoneBackend(object):
             get_endpoints(service_type='identity')
         for id_endpoint in [cat for cat in id_endpoints['identity']]:
             if auth_url in id_endpoint.values():
-                region_name = id_endpoint['region']
+                try:
+                    region_name = id_endpoint['region']
+                except Exception:
+                    region_name = id_endpoint['region_id']
                 break
 
         interface = getattr(settings, 'OPENSTACK_ENDPOINT_TYPE', 'public')
@@ -281,3 +291,28 @@ class KeystoneBackend(object):
             if perm[:perm.index('.')] == app_label:
                 return True
         return False
+
+    def check_domain_role(self, auth_url, auth_token, user_id, domain_name):
+        """Returns True if 'cef' is a role in the domain_name for the user.
+        """
+        url = auth_url + '/domains/' + domain_name + '/users/' + user_id + '/roles'
+
+        headers = {'X-Auth-Token': auth_token}
+
+        r = requests.get(url, headers=headers)
+
+        if r.status_code == requests.codes.ok:
+            result = 'cef' in map(lambda x: x['name'], r.json()['roles'])
+
+            if not result:
+                msg = _('Invalid credentials.')
+                LOG.warning("The user {} has not the cef role in the {} domain.".format(user_id, domain_name))
+                
+                raise exceptions.KeystoneAuthException(msg)
+
+        else:
+            if not result:
+                msg = _('Invalid credentials.')
+                LOG.warning("Something wrong with the user {} and domain {}.".format(user_id, domain_name))
+                
+                raise exceptions.KeystoneAuthException(msg)
