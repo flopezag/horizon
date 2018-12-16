@@ -354,6 +354,10 @@ def image_list_detailed(request, marker=None, sort_dir='desc',
     else:
         images = list(images_iter)
 
+    # (fla): filter CEF metadata property equal to true
+    f = FilterProperty(property='cef')
+    images = f.filter_property(images=images)
+    
     # TODO(jpichon): Do it better
     wrapped_images = []
     for image in images:
@@ -796,3 +800,18 @@ def metadefs_namespace_remove_resource_type(request,
 
 def get_version():
     return VERSIONS.active
+
+class FilterProperty:
+    def __init__(self, property):
+        self.property = property
+
+    def __filter_property__(self, image):
+        try:
+            boolean = image[self.property] == 'true'
+        except Exception:
+            boolean = False
+
+        return boolean
+
+    def filter_property(self, images):
+        return list(filter(lambda x: self.__filter_property__(image=x), images))
