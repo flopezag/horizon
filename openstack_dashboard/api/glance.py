@@ -806,8 +806,15 @@ class FilterProperty:
         self.property = property
 
     def __filter_property__(self, image):
+        from glanceclient.v1.images import Image
+
+        if type(image) is Image:
+            aux = image._info['properties']
+        else:
+            aux = image
+
         try:
-            boolean = image[self.property] == 'true'
+            boolean = aux[self.property] == 'true'
         except Exception:
             boolean = False
 
